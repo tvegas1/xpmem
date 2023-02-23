@@ -66,5 +66,6 @@ AC_CONFIG_LINKS([kernel/xpmem_attach.c:kernel/xpmem_attach.c
                  kernel/xpmem_misc.c:kernel/xpmem_misc.c
                  kernel/xpmem_mmu_notifier.c:kernel/xpmem_mmu_notifier.c
                  kernel/xpmem_pfn.c:kernel/xpmem_pfn.c
-                 kernel/xpmem_private.h:kernel/xpmem_private.h])
+                 kernel/xpmem_private.h:kernel/xpmem_private.h
+                 test/run.sh:test/run.sh])
 AC_OUTPUT
