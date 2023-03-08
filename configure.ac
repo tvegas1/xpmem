@@ -1,26 +1,20 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.59)
-AC_INIT([xpmem], [0.2], [http://github.com/hjelmn/xpmem/issues])
+AC_PREREQ([2.63])
+AC_INIT([xpmem], [2.7], [http://github.com/openucx/xpmem/issues])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_SRCDIR([include/xpmem.h])
 AC_CONFIG_MACRO_DIR([m4])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AM_SILENT_RULES
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 AM_PROG_AR
-AM_PROG_LIBTOOL
+LT_INIT
 AC_PROG_LN_S
-
-# Checks for libraries.
-
-# Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([fcntl.h stdlib.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
