@@ -169,6 +169,7 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	int ret;
 	u64 seg_vaddr;
 	struct xpmem_attachment *att;
+	struct page *page = NULL;
 
 	att = vma->vm_private_data;
 	if (!att) {
@@ -183,9 +184,12 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	seg_vaddr = (att->vaddr & PAGE_MASK) + (vaddr - att->at_vaddr);
 	XPMEM_DEBUG("vaddr = %llx, seg_vaddr = %llx", vaddr, seg_vaddr);
 
-	ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, pfn);
-	if (!ret) {
+	ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, &page, 1);
+	if (ret >= 0) {
 		att->flags |= XPMEM_FLAG_VALIDPTEs;
+		if (page) {
+			*pfn = page_to_pfn(page);
+		}
 	}
 	return;
 }
