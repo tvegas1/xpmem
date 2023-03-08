@@ -263,6 +263,21 @@ struct xpmem_partition {
 #define XPMEM_NODE_OFFLINE		-2
 #define XPMEM_CPUS_OFFLINE		-2
 
+/*
+ * Pre-fault pages forward and backward
+ */
+#define XPMEM_MAX_PAGE_FAULT_AFTER 32
+#define XPMEM_MAX_PAGE_FAULT_BEFORE 16
+#define XPMEM_MAX_PAGE_FAULTS 128
+
+struct xpmem_config {
+	rwlock_t lock;
+	unsigned long max_page_fault_after;
+	unsigned long max_page_fault_before;
+};
+
+extern struct xpmem_config xpmem_config;
+
 /* found in xpmem_make.c */
 extern int xpmem_make(u64, size_t, int, void *, xpmem_segid_t *);
 extern void xpmem_remove_segs_of_tg(struct xpmem_thread_group *);
@@ -299,8 +314,12 @@ extern spinlock_t xpmem_unpin_procfs_lock;
 extern struct proc_dir_entry *xpmem_unpin_procfs_dir;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 extern struct file_operations xpmem_unpin_procfs_ops;
+extern struct file_operations xpmem_config_max_page_fault_after_procfs_ops;
+extern struct file_operations xpmem_config_max_page_fault_before_procfs_ops;
 #else
 extern const struct proc_ops xpmem_unpin_procfs_ops;
+extern const struct proc_ops xpmem_config_max_page_fault_after_procfs_ops;
+extern const struct proc_ops xpmem_config_max_page_fault_before_procfs_ops;
 #endif
 
 
@@ -309,6 +328,8 @@ extern struct xpmem_partition *xpmem_my_part;
 void xpmem_teardown(struct xpmem_thread_group *tg);
 
 /* found in xpmem_misc.c */
+void xpmem_max_page_fault_get(unsigned long *before, unsigned long *after);
+
 extern struct xpmem_thread_group *
 __xpmem_tg_ref_by_tgid_nolock_internal(pid_t tgid, int index, int return_destroying);
 static inline struct xpmem_thread_group *__xpmem_tg_ref_by_tgid(pid_t tgid, int return_destroying) {

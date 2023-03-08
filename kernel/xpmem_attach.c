@@ -192,10 +192,6 @@ xpmem_fault_vaddr_start(u64 vm_start, u64 addr, unsigned long max_pages)
 	return addr;
 }
 
-#define XPMEM_FAULT_AFTER 32
-#define XPMEM_FAULT_BEFORE 16
-#define XPMEM_FAULT_PAGES (XPMEM_FAULT_BEFORE + XPMEM_FAULT_AFTER)
-
 static int
 xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 		  u64 vaddr)
@@ -207,9 +203,12 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	struct xpmem_attachment *att;
 	unsigned long nr_pages;
 	struct vm_area_struct *src_vma;
+	unsigned long pages_after;
+	unsigned long pages_before;
+	struct page *pages[XPMEM_MAX_PAGE_FAULTS];
 	int result = 0;
 
-	struct page *pages[XPMEM_FAULT_PAGES];
+	xpmem_max_page_fault_get(&pages_before, &pages_after);
 
 	att = vma->vm_private_data;
 	if (!att) {
@@ -233,14 +232,14 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	 * - Forward: start == vaddr as previous PTE's are present, end > vaddr
 	 * - Backward: end == vaddr + 1, as PTE's after are present, start <= vaddr
 	 */
-	end = xpmem_fault_vaddr_end(end, vaddr + PAGE_SIZE, XPMEM_FAULT_AFTER);
-	start = xpmem_fault_vaddr_start(start, vaddr, XPMEM_FAULT_BEFORE);
+	end = xpmem_fault_vaddr_end(end, vaddr + PAGE_SIZE, pages_after);
+	start = xpmem_fault_vaddr_start(start, vaddr, pages_before);
 
 	while (start < end) {
 		seg_vaddr = (att->vaddr & PAGE_MASK) + (start - att->at_vaddr);
 
 		nr_pages = (end - start) >> PAGE_SHIFT;
-		BUG_ON(nr_pages > XPMEM_FAULT_PAGES);
+		BUG_ON(nr_pages > XPMEM_MAX_PAGE_FAULTS);
 
 		ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, pages, nr_pages);
 		if (ret >= 0) {
