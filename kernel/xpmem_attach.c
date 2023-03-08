@@ -162,6 +162,34 @@ out:
 #endif
 }
 
+static void
+xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
+				  u64 vaddr, unsigned long *pfn)
+{
+	int ret;
+	u64 seg_vaddr;
+	struct xpmem_attachment *att;
+
+	att = vma->vm_private_data;
+	if (!att) {
+		return;
+	}
+
+	if (vaddr < att->at_vaddr || vaddr + 1 > att->at_vaddr + att->at_size) {
+		return;
+	}
+
+	/* translate the fault virtual address to the source virtual address */
+	seg_vaddr = (att->vaddr & PAGE_MASK) + (vaddr - att->at_vaddr);
+	XPMEM_DEBUG("vaddr = %llx, seg_vaddr = %llx", vaddr, seg_vaddr);
+
+	ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, pfn);
+	if (!ret) {
+		att->flags |= XPMEM_FLAG_VALIDPTEs;
+	}
+	return;
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
 static vm_fault_t
 xpmem_fault_handler(struct vm_fault *vmf)
@@ -188,7 +216,6 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 #else
         u64 vaddr = (u64)(uintptr_t) vmf->virtual_address;
 #endif
-	u64 seg_vaddr;
 	unsigned long pfn = 0, old_pfn = 0;
 	struct xpmem_thread_group *ap_tg, *seg_tg;
 	struct xpmem_access_permit *ap;
@@ -285,18 +312,7 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 	    (seg_tg->flags & XPMEM_FLAG_DESTROYING))
 		goto out_2;
 
-	if (vaddr < att->at_vaddr || vaddr + 1 > att->at_vaddr + att->at_size)
-		goto out_2;
-
-	/* translate the fault virtual address to the source virtual address */
-	seg_vaddr = (att->vaddr & PAGE_MASK) + (vaddr - att->at_vaddr);
-	XPMEM_DEBUG("vaddr = %llx, seg_vaddr = %llx", vaddr, seg_vaddr);
-
-        ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, &pfn);
-        if (ret != 0)
-		goto out_2;
-
-	att->flags |= XPMEM_FLAG_VALIDPTEs;
+	xpmem_fault_pages(seg, vma, vaddr, &pfn);
 
 out_2:
 	xpmem_seg_up_read(seg_tg, seg, 1);
