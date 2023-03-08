@@ -226,6 +226,86 @@ xpmem_vaddr_to_pte_size(struct mm_struct *mm, u64 vaddr, u64 *size)
 	return pte;
 }
 
+static void
+xpmem_put_page(struct page *page)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+	put_page(page);
+#else
+	page_cache_release(page);
+#endif
+}
+
+struct remap_context {
+	struct xpmem_segment *seg;
+	struct page **pages;
+	unsigned long index;
+	unsigned long count;
+	struct vm_area_struct *vma;
+	u64 vaddr;
+	int result;
+};
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)
+static int remap_func(pte_t *pte, pgtable_t token, unsigned long addr,
+		      void *data)
+#else
+static int remap_func(pte_t *pte, unsigned long addr, void *data)
+#endif
+{
+	struct remap_context *ctx = data;
+	struct xpmem_segment *seg = ctx->seg;
+	struct page *page = ctx->pages[ctx->index++];
+	unsigned long pfn = page_to_pfn(page);
+	unsigned long old_pfn = pte_pfn(*pte);
+
+	BUG_ON(!pfn_valid(pfn));
+
+	if (addr == ctx->vaddr) {
+		if (!old_pfn || pfn == old_pfn) {
+			ctx->result = VM_FAULT_NOPAGE;
+		}
+	}
+
+	if (old_pfn) {
+		xpmem_put_page(page);
+		atomic_dec(&seg->tg->n_pinned);
+		atomic_inc(&xpmem_my_part->n_unpinned);
+		return 0;
+	}
+
+	/* Special PTE are not associated with any struct page */
+	set_pte_at(ctx->vma->vm_mm, addr, pte,
+		   pte_mkspecial(pfn_pte(pfn, ctx->vma->vm_page_prot)));
+	return 0;
+}
+
+int
+xpmem_remap_pages(struct xpmem_segment *seg,
+		  struct vm_area_struct *vma, u64 vaddr, u64 start,
+		  struct page **pages, unsigned long nr_pages)
+{
+	int i;
+	struct remap_context ctx = {
+		.seg = seg,
+		.pages = pages,
+		.index = 0,
+		.count = nr_pages,
+		.vma = vma,
+		.vaddr = vaddr,
+		.result = 0,
+	};
+
+	(void)apply_to_page_range(current->mm, start, nr_pages * PAGE_SIZE,
+				  remap_func, &ctx);
+	for (i = ctx.index; i < nr_pages; i++) {
+		xpmem_put_page(ctx.pages[i]);
+		atomic_dec(&seg->tg->n_pinned);
+		atomic_inc(&xpmem_my_part->n_unpinned);
+	}
+	return ctx.result;
+}
+
 /*
  * Fault in and pin a single page for the specified task and mm.
  */

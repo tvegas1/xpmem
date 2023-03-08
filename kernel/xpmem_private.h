@@ -385,6 +385,11 @@ extern const struct proc_ops xpmem_debug_printk_procfs_ops;
 extern int xpmem_mmu_notifier_init(struct xpmem_thread_group *);
 extern void xpmem_mmu_notifier_unlink(struct xpmem_thread_group *);
 
+int
+xpmem_remap_pages(struct xpmem_segment *seg,
+		  struct vm_area_struct *vma, u64 vaddr, u64 start,
+		  struct page **pages, unsigned long nr_pages);
+
 /*
  * Inlines that mark an internal driver structure as being destroyable or not.
  * The idea is to set the refcnt to 1 at structure creation time and then
