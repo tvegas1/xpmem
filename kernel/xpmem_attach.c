@@ -346,17 +346,16 @@ out_1:
 #endif
 			atomic_dec(&seg->tg->n_pinned);
 			atomic_inc(&xpmem_my_part->n_unpinned);
-			goto out;
-		}
-
-		XPMEM_DEBUG("calling remap_pfn_range() vaddr=%llx, pfn=%lx",
-				vaddr, pfn);
-		if ((remap_pfn_range(vma, vaddr, pfn, PAGE_SIZE,
-				     vma->vm_page_prot)) == 0) {
-			ret = VM_FAULT_NOPAGE;
+		} else {
+			XPMEM_DEBUG("calling remap_pfn_range() vaddr=%llx, pfn=%lx",
+					vaddr, pfn);
+			if ((remap_pfn_range(vma, vaddr, pfn, PAGE_SIZE,
+						 vma->vm_page_prot)) == 0) {
+				ret = VM_FAULT_NOPAGE;
+			}
 		}
 	}
-out:
+
 	if (seg_tg_mmap_sem_locked)
 		xpmem_mmap_read_unlock(seg_tg->mm);
 
