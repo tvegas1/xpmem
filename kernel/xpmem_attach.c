@@ -190,6 +190,53 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	return;
 }
 
+static int
+xpmem_map_pages(struct xpmem_segment *seg,
+				struct vm_area_struct *vma, u64 vaddr, unsigned long pfn)
+{
+	unsigned long old_pfn;
+	int ret = VM_FAULT_SIGBUS;
+
+	/*
+	 * remap_pfn_range() does not allow racing threads to each insert
+	 * the PFN for a given virtual address.  To account for this, we
+	 * call remap_pfn_range() with the att->mutex locked and don't
+	 * perform the redundant remap_pfn_range() when a PFN already exists.
+	 */
+	if (pfn && pfn_valid(pfn)) {
+		old_pfn = xpmem_vaddr_to_PFN(current->mm, vaddr);
+		if (old_pfn) {
+			if (old_pfn == pfn) {
+				ret = VM_FAULT_NOPAGE;
+			} else {
+				/* should not be possible, but just in case */
+				printk("xpmem_fault_handler: pfn mismatch: "
+					   "%ld != %ld\n", old_pfn, pfn);
+			}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+			put_page(pfn_to_page(pfn));
+#else
+			page_cache_release(pfn_to_page(pfn));
+#endif
+			atomic_dec(&seg->tg->n_pinned);
+			atomic_inc(&xpmem_my_part->n_unpinned);
+		} else {
+			XPMEM_DEBUG("calling remap_pfn_range() vaddr=%llx, pfn=%lx",
+						vaddr, pfn);
+			if ((remap_pfn_range(vma, vaddr, pfn, PAGE_SIZE,
+								 vma->vm_page_prot)) == 0) {
+				ret = VM_FAULT_NOPAGE;
+			}
+		}
+	}
+	if (ret == VM_FAULT_SIGBUS) {
+		XPMEM_DEBUG("fault returning SIGBUS vaddr=%llx, pfn=%lx", vaddr, pfn);
+	}
+
+	return ret;
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
 static vm_fault_t
 xpmem_fault_handler(struct vm_fault *vmf)
@@ -216,7 +263,7 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 #else
         u64 vaddr = (u64)(uintptr_t) vmf->virtual_address;
 #endif
-	unsigned long pfn = 0, old_pfn = 0;
+	unsigned long pfn = 0;
 	struct xpmem_thread_group *ap_tg, *seg_tg;
 	struct xpmem_access_permit *ap;
 	struct xpmem_attachment *att;
@@ -320,41 +367,7 @@ out_1:
 	xpmem_ap_deref(ap);
 	xpmem_tg_deref(ap_tg);
 
-	ret = VM_FAULT_SIGBUS;
-
-	/*
-	 * remap_pfn_range() does not allow racing threads to each insert
-	 * the PFN for a given virtual address.  To account for this, we
-	 * call remap_pfn_range() with the att->mutex locked and don't
-	 * perform the redundant remap_pfn_range() when a PFN already exists.
-	 */
-        if (pfn && pfn_valid(pfn)) {
-		old_pfn = xpmem_vaddr_to_PFN(current->mm, vaddr);
-		if (old_pfn) {
-			if (old_pfn == pfn) {
-				ret = VM_FAULT_NOPAGE;
-			} else {
-				/* should not be possible, but just in case */
-				printk("xpmem_fault_handler: pfn mismatch: "
-				       "%ld != %ld\n", old_pfn, pfn);
-			}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
-			put_page(pfn_to_page(pfn));
-#else
-			page_cache_release(pfn_to_page(pfn));
-#endif
-			atomic_dec(&seg->tg->n_pinned);
-			atomic_inc(&xpmem_my_part->n_unpinned);
-		} else {
-			XPMEM_DEBUG("calling remap_pfn_range() vaddr=%llx, pfn=%lx",
-					vaddr, pfn);
-			if ((remap_pfn_range(vma, vaddr, pfn, PAGE_SIZE,
-						 vma->vm_page_prot)) == 0) {
-				ret = VM_FAULT_NOPAGE;
-			}
-		}
-	}
+	ret = xpmem_map_pages(seg, vma, vaddr, pfn);
 
 	if (seg_tg_mmap_sem_locked)
 		xpmem_mmap_read_unlock(seg_tg->mm);
@@ -367,10 +380,6 @@ out_1:
         xpmem_tg_deref(seg_tg);
         xpmem_seg_deref(seg);
 	xpmem_att_deref(att);
-
-	if (ret == VM_FAULT_SIGBUS) {
-		XPMEM_DEBUG("fault returning SIGBUS vaddr=%llx, pfn=%lx", vaddr, pfn);
-	}
 
 	return ret;
 }
