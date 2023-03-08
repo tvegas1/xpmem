@@ -59,4 +59,13 @@ AC_CONFIG_FILES([Makefile
                  kernel/xpmem
                  lib/Makefile
                  test/Makefile])
+AC_CONFIG_LINKS([kernel/xpmem_attach.c:kernel/xpmem_attach.c
+                 kernel/xpmem_get.c:kernel/xpmem_get.c
+                 kernel/xpmem_main.c:kernel/xpmem_main.c
+                 kernel/xpmem_make.c:kernel/xpmem_make.c
+                 kernel/xpmem_misc.c:kernel/xpmem_misc.c
+                 kernel/xpmem_mmu_notifier.c:kernel/xpmem_mmu_notifier.c
+                 kernel/xpmem_pfn.c:kernel/xpmem_pfn.c
+                 kernel/xpmem_private.h:kernel/xpmem_private.h
+                 test/run.sh:test/run.sh])
 AC_OUTPUT
