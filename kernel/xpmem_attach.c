@@ -162,36 +162,109 @@ out:
 #endif
 }
 
-static void
+/* Find the range of non present entries */
+static u64
+xpmem_fault_vaddr_end(u64 vm_end, u64 addr, unsigned long max_pages)
+{
+	for (; max_pages; max_pages--, addr += PAGE_SIZE) {
+		if (addr >= vm_end) {
+			break;
+		}
+		if (xpmem_vaddr_to_PFN(current->mm, addr)) {
+			break;
+		}
+	}
+	return addr;
+}
+
+/* Find the range of non present entries before the request address */
+static u64
+xpmem_fault_vaddr_start(u64 vm_start, u64 addr, unsigned long max_pages)
+{
+	for (; max_pages; max_pages--, addr -= PAGE_SIZE) {
+		if (addr <= vm_start) {
+			break;
+		}
+		if (xpmem_vaddr_to_PFN(current->mm, addr - PAGE_SIZE)) {
+			break;
+		}
+	}
+	return addr;
+}
+
+#define XPMEM_FAULT_AFTER 32
+#define XPMEM_FAULT_BEFORE 16
+#define XPMEM_FAULT_PAGES (XPMEM_FAULT_BEFORE + XPMEM_FAULT_AFTER)
+
+static int
 xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
-				  u64 vaddr, unsigned long *pfn)
+		  u64 vaddr)
 {
 	int ret;
 	u64 seg_vaddr;
+	u64 end;
+	u64 start;
 	struct xpmem_attachment *att;
-	struct page *page = NULL;
+	unsigned long nr_pages;
+	struct vm_area_struct *src_vma;
+	int result = 0;
+
+	struct page *pages[XPMEM_FAULT_PAGES];
 
 	att = vma->vm_private_data;
 	if (!att) {
-		return;
+		goto out;
 	}
 
 	if (vaddr < att->at_vaddr || vaddr + 1 > att->at_vaddr + att->at_size) {
-		return;
+		goto out;
+	}
+	if (vaddr < vma->vm_start || vaddr >= vma->vm_end) {
+		goto out;
 	}
 
-	/* translate the fault virtual address to the source virtual address */
-	seg_vaddr = (att->vaddr & PAGE_MASK) + (vaddr - att->at_vaddr);
-	XPMEM_DEBUG("vaddr = %llx, seg_vaddr = %llx", vaddr, seg_vaddr);
+	end = min((u64)vma->vm_end, att->at_vaddr + att->at_size);
+	start = max((u64)vma->vm_start, att->at_vaddr);
 
-	ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, &page, 1);
-	if (ret >= 0) {
-		att->flags |= XPMEM_FLAG_VALIDPTEs;
-		if (page) {
-			*pfn = page_to_pfn(page);
+	/*
+	 * When calling memcpy(), glibc can use memmove() instead, which can fault
+	 * pages backward, so we have following possible faulting patterns:
+	 * - Random: start <= vaddr and end > vaddr
+	 * - Forward: start == vaddr as previous PTE's are present, end > vaddr
+	 * - Backward: end == vaddr + 1, as PTE's after are present, start <= vaddr
+	 */
+	end = xpmem_fault_vaddr_end(end, vaddr + PAGE_SIZE, XPMEM_FAULT_AFTER);
+	start = xpmem_fault_vaddr_start(start, vaddr, XPMEM_FAULT_BEFORE);
+
+	while (start < end) {
+		seg_vaddr = (att->vaddr & PAGE_MASK) + (start - att->at_vaddr);
+
+		nr_pages = (end - start) >> PAGE_SHIFT;
+		BUG_ON(nr_pages > XPMEM_FAULT_PAGES);
+
+		ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, pages, nr_pages);
+		if (ret >= 0) {
+			att->flags |= XPMEM_FLAG_VALIDPTEs;
 		}
+		if (ret <= 0) {
+			src_vma = find_vma(seg->tg->mm, seg_vaddr);
+			if (!src_vma) {
+				break;
+			}
+			if (src_vma->vm_start > seg_vaddr) {
+				start += src_vma->vm_start - seg_vaddr;
+			} else {
+				/* seg_vaddr is inside src_vma, but it is not usable */
+				start += src_vma->vm_end - seg_vaddr;
+			}
+			continue;
+		}
+
+		result |= xpmem_remap_pages(seg, vma, vaddr, start, pages, ret);
+		start += ret << PAGE_SHIFT;
 	}
-	return;
+out:
+	return result? : VM_FAULT_SIGBUS;
 }
 
 static int
@@ -267,7 +340,6 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 #else
         u64 vaddr = (u64)(uintptr_t) vmf->virtual_address;
 #endif
-	unsigned long pfn = 0;
 	struct xpmem_thread_group *ap_tg, *seg_tg;
 	struct xpmem_access_permit *ap;
 	struct xpmem_attachment *att;
@@ -363,15 +435,13 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 	    (seg_tg->flags & XPMEM_FLAG_DESTROYING))
 		goto out_2;
 
-	xpmem_fault_pages(seg, vma, vaddr, &pfn);
+	ret = xpmem_fault_pages(seg, vma, vaddr);
 
 out_2:
 	xpmem_seg_up_read(seg_tg, seg, 1);
 out_1:
 	xpmem_ap_deref(ap);
 	xpmem_tg_deref(ap_tg);
-
-	ret = xpmem_map_pages(seg, vma, vaddr, pfn);
 
 	if (seg_tg_mmap_sem_locked)
 		xpmem_mmap_read_unlock(seg_tg->mm);
