@@ -347,9 +347,11 @@ user_atol(const char __user *buffer, size_t count)
 }
 
 static ssize_t
-xpmem_config_max_page_fault_after_write(struct file *file,
-					const char __user *buffer,
-					size_t count, loff_t *ppos)
+xpmem_config_max_page_fault_common(struct file *file,
+				   const char __user *buffer,
+				   size_t count, loff_t *ppos,
+				   unsigned long *target,
+				   unsigned long other)
 {
 	ssize_t ret = count;
 
@@ -359,13 +361,28 @@ xpmem_config_max_page_fault_after_write(struct file *file,
 	}
 
 	write_lock(&xpmem_config.lock);
-	if (xpmem_config.max_page_fault_before + value >= XPMEM_MAX_PAGE_FAULTS) {
+	if (other + value >= XPMEM_MAX_PAGE_FAULTS) {
 		ret = -EINVAL;
 	} else {
-		xpmem_config.max_page_fault_after = value;
+		*target = value;
 	}
 	write_unlock(&xpmem_config.lock);
 	return ret;
+}
+
+static ssize_t
+xpmem_config_max_page_fault_after_write(struct file *file,
+					const char __user *buffer,
+					size_t count, loff_t *ppos)
+{
+	unsigned long *target = &xpmem_config.max_page_fault_after;
+	unsigned long other = xpmem_config.max_page_fault_before;
+	return xpmem_config_max_page_fault_common(file,
+						  buffer,
+						  count,
+						  ppos,
+						  target,
+						  other);
 }
 
 static int
@@ -386,21 +403,14 @@ xpmem_config_max_page_fault_before_write(struct file *file,
 					 const char __user *buffer,
 					 size_t count, loff_t *ppos)
 {
-	ssize_t ret = count;
-
-	long value = user_atol(buffer, count);
-	if (value < 0) {
-		return -EINVAL;
-	}
-
-	write_lock(&xpmem_config.lock);
-	if (xpmem_config.max_page_fault_after + value >= XPMEM_MAX_PAGE_FAULTS) {
-		ret = -EINVAL;
-	} else {
-		xpmem_config.max_page_fault_before = value;
-	}
-	write_unlock(&xpmem_config.lock);
-	return ret;
+	unsigned long *target = &xpmem_config.max_page_fault_before;
+	unsigned long other = xpmem_config.max_page_fault_after;
+	return xpmem_config_max_page_fault_common(file,
+						  buffer,
+						  count,
+						  ppos,
+						  target,
+						  other);
 }
 
 static int
@@ -442,7 +452,7 @@ const struct proc_ops name = { \
 	.proc_read		= seq_read, \
 	.proc_write		= writer, \
 	.proc_open		= opener, \
-	.proc_release	= single_release, \
+	.proc_release		= single_release, \
 }
 #endif
 

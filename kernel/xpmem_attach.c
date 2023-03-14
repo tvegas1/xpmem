@@ -207,7 +207,6 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	unsigned long pages_before;
 	struct page *pages[XPMEM_MAX_PAGE_FAULTS];
 	int result = 0;
-
 	xpmem_max_page_fault_get(&pages_before, &pages_after);
 
 	att = vma->vm_private_data;

@@ -285,7 +285,7 @@ xpmem_remap_pages(struct xpmem_segment *seg,
 		  struct vm_area_struct *vma, u64 vaddr, u64 start,
 		  struct page **pages, unsigned long nr_pages)
 {
-	int i;
+	unsigned long i;
 	struct remap_context ctx = {
 		.seg = seg,
 		.pages = pages,
