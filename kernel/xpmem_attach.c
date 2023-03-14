@@ -234,7 +234,11 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	end = xpmem_fault_vaddr_end(end, vaddr + PAGE_SIZE, pages_after);
 	start = xpmem_fault_vaddr_start(start, vaddr, pages_before);
 
+	XPMEM_DEBUG("vaddr = %llx, start = %llx, end = %llx", vaddr, start,
+		    end);
+
 	while (start < end) {
+		/* translate current fault vaddr to the source vaddr */
 		seg_vaddr = (att->vaddr & PAGE_MASK) + (start - att->at_vaddr);
 
 		nr_pages = (end - start) >> PAGE_SHIFT;
@@ -257,12 +261,19 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 			}
 			continue;
 		}
-
+		XPMEM_DEBUG("calling xpmem_remap_pages() vaddr=%llx "
+			    "start=%llx npages=%d", vaddr, start, ret);
 		result |= xpmem_remap_pages(seg, vma, vaddr, start, pages, ret);
 		start += ret << PAGE_SHIFT;
 	}
 out:
-	return result? : VM_FAULT_SIGBUS;
+	if (!result) {
+		result = VM_FAULT_SIGBUS;
+	}
+	if (result == VM_FAULT_SIGBUS) {
+		XPMEM_DEBUG("fault returning SIGBUS vaddr=%llx", vaddr);
+	}
+	return result;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)

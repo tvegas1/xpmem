@@ -264,6 +264,10 @@ static int remap_func(pte_t *pte, unsigned long addr, void *data)
 	if (addr == ctx->vaddr) {
 		if (!old_pfn || pfn == old_pfn) {
 			ctx->result = VM_FAULT_NOPAGE;
+		} else {
+			/* should not be possible, but just in case */
+			XPMEM_DEBUG("remap_func: vaddr:%lx pfn mismatch: "
+				    "%ld != %ld\n", addr, old_pfn, pfn);
 		}
 	}
 
