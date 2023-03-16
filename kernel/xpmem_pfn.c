@@ -246,18 +246,7 @@ struct remap_context {
 	int result;
 };
 
-
-#undef XPMEM_LATEST_REMAP_FUNC
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
-#define XPMEM_LATEST_REMAP_FUNC 1
-#elif defined(RHEL_RELEASE_CODE)
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 2)
-#define XPMEM_LATEST_REMAP_FUNC 1
-#endif
-#endif
-
-#ifdef XPMEM_LATEST_REMAP_FUNC
+#ifdef HAVE_LATEST_APPLY_TO_PAGE_RANGE
 static int remap_func(pte_t *pte, unsigned long addr, void *data)
 #else
 static int remap_func(pte_t *pte, pgtable_t token, unsigned long addr,
