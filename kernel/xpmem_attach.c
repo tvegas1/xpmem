@@ -288,10 +288,11 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 #endif
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-	vm_fault_t ret;
+	vm_fault_t result;
 #else
-	int ret;
+	int result;
 #endif
+	int ret;
 	int att_locked = 0;
 	int seg_tg_mmap_sem_locked = 0, vma_verification_needed = 0;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
@@ -338,6 +339,8 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 	xpmem_seg_ref(seg);
 	seg_tg = seg->tg;
 	xpmem_tg_ref(seg_tg);
+
+	result = VM_FAULT_SIGBUS;
 
 	/*
 	 * The faulting thread has its mmap_sem/mmap_lock locked on entrance to this
@@ -397,7 +400,7 @@ xpmem_fault_handler(struct vm_area_struct *vma, struct vm_fault *vmf)
 	    (seg_tg->flags & XPMEM_FLAG_DESTROYING))
 		goto out_2;
 
-	ret = xpmem_fault_pages(seg, vma, vaddr);
+	result = xpmem_fault_pages(seg, vma, vaddr);
 
 out_2:
 	xpmem_seg_up_read(seg_tg, seg, 1);
@@ -417,7 +420,7 @@ out_1:
         xpmem_seg_deref(seg);
 	xpmem_att_deref(att);
 
-	return ret;
+	return result;
 }
 
 struct vm_operations_struct xpmem_vm_ops = {
