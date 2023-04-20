@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.63])
 AC_INIT([xpmem], [2.7], [http://github.com/openucx/xpmem/issues])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 AC_CONFIG_SRCDIR([include/xpmem.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -11,6 +11,7 @@ AM_SILENT_RULES
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AR
 LT_INIT
@@ -24,6 +25,18 @@ AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_C_VOLATILE
+
+# Check C++ 14 support
+save_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="-Werror -std=c++14"
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([C++14 support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([int x = 0b101010;])],
+                  [have_cxx14=yes], [have_cxx14=no])
+AC_MSG_RESULT([$have_cxx14])
+AC_LANG_POP
+CXXFLAGS="$save_CXXFLAGS"
+AM_CONDITIONAL([HAVE_CXX14], [test "x$have_cxx14" = "xyes"])
 
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
@@ -52,7 +65,11 @@ AC_CONFIG_FILES([Makefile
                  kernel/Makefile
                  kernel/xpmem
                  lib/Makefile
-                 test/Makefile])
+                 test/Makefile
+                 test/share/Makefile
+                 test/gtest/Makefile
+                 test/gtest/common/googletest/Makefile])
+
 AC_CONFIG_LINKS([kernel/xpmem_attach.c:kernel/xpmem_attach.c
                  kernel/xpmem_get.c:kernel/xpmem_get.c
                  kernel/xpmem_main.c:kernel/xpmem_main.c
@@ -61,5 +78,5 @@ AC_CONFIG_LINKS([kernel/xpmem_attach.c:kernel/xpmem_attach.c
                  kernel/xpmem_mmu_notifier.c:kernel/xpmem_mmu_notifier.c
                  kernel/xpmem_pfn.c:kernel/xpmem_pfn.c
                  kernel/xpmem_private.h:kernel/xpmem_private.h
-                 test/run.sh:test/run.sh])
+                 test/share/run.sh:test/share/run.sh])
 AC_OUTPUT
