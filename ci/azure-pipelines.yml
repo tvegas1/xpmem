@@ -23,8 +23,40 @@ resources:
       image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu20.04:1
     - container: ubuntu22
       image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu22.04:1
+    - container: fedora
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/fedora33:1
 
 stages:
+  - stage: Codestyle
+    jobs:
+      - job: format
+        displayName: Format code
+        pool:
+          name: MLNX
+          demands:
+          - ucx_docker
+        container: fedora
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 100
+          - bash: |
+              set -x
+              BASE_SOURCEVERSION=$(git rev-parse HEAD^)
+              echo "Checking code format on diff ${BASE_SOURCEVERSION}..${BUILD_SOURCEVERSION}"
+              PATCH=$(git-clang-format --diff ${BASE_SOURCEVERSION} ${BUILD_SOURCEVERSION})
+              if [ "$PATCH" = "no modified files to format" ]; then
+                  exit
+              fi
+              echo "$PATCH" | git apply
+              if ! git diff --quiet --exit-code; then
+                set +x
+                echo "##vso[task.complete result=SucceededWithIssues;]DONE Code is not formatted correctly"
+              fi
+            condition: eq(variables['Build.Reason'], 'PullRequest')
+            displayName: Check gtest code format
+            workingDirectory: $(System.DefaultWorkingDirectory)/test/gtest
+
   - stage: Build
     jobs:
       - job: Build
