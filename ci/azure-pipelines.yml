@@ -44,7 +44,7 @@ stages:
               set -x
               BASE_SOURCEVERSION=$(git rev-parse HEAD^)
               echo "Checking code format on diff ${BASE_SOURCEVERSION}..${BUILD_SOURCEVERSION}"
-              PATCH=$(git-clang-format --diff ${BASE_SOURCEVERSION} ${BUILD_SOURCEVERSION})
+              PATCH=$(git-clang-format --diff ${BASE_SOURCEVERSION} ${BUILD_SOURCEVERSION}) ./
               if [ "$PATCH" = "no modified files to format" ]; then
                   exit
               fi
