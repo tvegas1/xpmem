@@ -161,7 +161,11 @@ TEST_F(test_basic, xpmem_get_not_allowed_permit) {
   for (auto pair : fails) {
     auto mem = create_xpmem(pair.first, pair.second);
     ASSERT_NE(-1, mem.first);
-    EXPECT_EQ(-1, mem.second);
+    if (geteuid() == 0) {
+      EXPECT_NE(-1, mem.second);
+    } else {
+      EXPECT_EQ(-1, mem.second);
+    }
     ASSERT_EQ(0, xpmem_remove(mem.first));
   }
 }
