@@ -58,6 +58,7 @@ stages:
             workingDirectory: $(System.DefaultWorkingDirectory)/test/gtest
 
   - stage: Build
+    dependsOn: Codestyle
     jobs:
       - job: Build
         pool:
@@ -101,3 +102,59 @@ stages:
               make
             displayName: Build Ubuntu
             condition: contains(variables['build_container'], 'ubuntu')
+
+  - stage: Test
+    dependsOn: Codestyle
+    jobs:
+      - job: Test
+        workspace:
+          clean: all
+        pool:
+          name: MLNX
+          demands:
+            - ucx_vagrant
+
+        strategy:
+          matrix:
+            centos7:
+              BOX_NAME: centos7
+            ubuntu18:
+              BOX_NAME: ubuntu1804
+            ubuntu20:
+              BOX_NAME: ubuntu2004
+            ubuntu22:
+              BOX_NAME: ubuntu2204
+
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 100
+    
+          - bash: |
+              set -x
+              export VAGRANT_HOME=/opt/vagrant_home
+              vagrant up
+            displayName: Bring up VM
+            workingDirectory: $(System.DefaultWorkingDirectory)/ci/vm/
+
+          - bash: |
+              vagrant ssh -- -t '
+                cd xpmem/test/share
+                sudo ./run.sh
+              '
+            displayName: Old tests
+            workingDirectory: $(System.DefaultWorkingDirectory)/ci/vm/
+
+          - bash: |
+              vagrant ssh -- -t '
+                sudo ./xpmem/test/gtest/gtest
+              '
+            displayName: Gtest
+            workingDirectory: $(System.DefaultWorkingDirectory)/ci/vm/
+
+          - bash: |
+              vagrant destroy -f
+              vagrant global-status --prune
+            condition: always()
+            displayName: Bring down VM
+            workingDirectory: $(System.DefaultWorkingDirectory)/ci/vm/
