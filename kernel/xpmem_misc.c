@@ -321,29 +321,17 @@ xpmem_debug_printk_procfs_open(struct inode *inode, struct file *file)
 }
 
 static long
-user_atol(const char __user *buffer, size_t count)
+user_atol(const char __user *buffer, size_t count, long *value)
 {
-	char buf[8];
-	size_t i;
-	unsigned long value = 0, old_value;
+	char buf[32];
 
-	count = min(count, sizeof(buf));
+	count = min(count, sizeof(buf) - 1);
 	if (copy_from_user(buf, buffer, count)) {
 		return -EFAULT;
 	}
-	for (i = 0; i < sizeof(buf); i++) {
-		if (buf[i] > '9' || buf[i] < '0') {
-			break;
-		}
-		old_value = value;
-		value *= 10;
-		value += buf[i] - '0';
 
-		if (value < old_value) {
-			return -EINVAL;
-		}
-	}
-	return value;
+	buf[count] = '\0';
+	return kstrtol(buf, 10, value);
 }
 
 static ssize_t
@@ -353,21 +341,25 @@ xpmem_config_max_page_fault_common(struct file *file,
 				   unsigned long *target,
 				   unsigned long other)
 {
-	ssize_t ret = count;
+	ssize_t size = count;
+	long value;
+	int ret = user_atol(buffer, count, &value);
 
-	long value = user_atol(buffer, count);
+	if (ret < 0) {
+		return ret;
+	}
 	if (value < 0) {
 		return -EINVAL;
 	}
 
 	write_lock(&xpmem_config.lock);
 	if (other + value >= XPMEM_MAX_PAGE_FAULTS) {
-		ret = -EINVAL;
+		size = -EINVAL;
 	} else {
 		*target = value;
 	}
 	write_unlock(&xpmem_config.lock);
-	return ret;
+	return size;
 }
 
 static ssize_t
