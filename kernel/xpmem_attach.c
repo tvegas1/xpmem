@@ -196,7 +196,7 @@ static int
 xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 		  u64 vaddr)
 {
-	int ret;
+	int count;
 	u64 seg_vaddr;
 	u64 end;
 	u64 start;
@@ -245,11 +245,11 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 		nr_pages = (end - start) >> PAGE_SHIFT;
 		BUG_ON(nr_pages > XPMEM_MAX_PAGE_FAULTS);
 
-		ret = xpmem_ensure_valid_PFN(seg, seg_vaddr, pages, nr_pages);
-		if (ret >= 0) {
+		count = xpmem_ensure_valid_PFN(seg, seg_vaddr, pages, nr_pages);
+		if (count >= 0) {
 			att->flags |= XPMEM_FLAG_VALIDPTEs;
 		}
-		if (ret <= 0) {
+		if (count <= 0) {
 			src_vma = find_vma(seg->tg->mm, seg_vaddr);
 			if (!src_vma) {
 				break;
@@ -263,9 +263,9 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 			continue;
 		}
 		XPMEM_DEBUG("calling xpmem_remap_pages() vaddr=%llx "
-			    "start=%llx npages=%d", vaddr, start, ret);
-		result |= xpmem_remap_pages(seg, vma, vaddr, start, pages, ret);
-		start += ret << PAGE_SHIFT;
+			    "start=%llx npages=%d", vaddr, start, count);
+		result |= xpmem_remap_pages(seg, vma, vaddr, start, pages, count);
+		start += count << PAGE_SHIFT;
 	}
 out:
 	if (!result) {

@@ -318,7 +318,7 @@ xpmem_pin_page(struct xpmem_thread_group *tg, struct task_struct *src_task,
 	       struct mm_struct *src_mm, u64 vaddr, struct page **pages,
 	       unsigned long count)
 {
-	int ret;
+	int pinned;
 	struct vm_area_struct *vma;
 	cpumask_t saved_mask = CPU_MASK_NONE;
 	int foll_write;
@@ -361,29 +361,29 @@ xpmem_pin_page(struct xpmem_thread_group *tg, struct task_struct *src_task,
 
 	/* get_user_pages()/get_user_pages_remote() faults and pins the page */
 #if   LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
-	ret = get_user_pages_remote (src_mm, vaddr, count, foll_write, pages, NULL,
-				     NULL);
+	pinned = get_user_pages_remote (src_mm, vaddr, count, foll_write, pages,
+				     NULL, NULL);
 #elif   LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
-	ret = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
+	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
 				     pages, NULL, NULL);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-	ret = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
+	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
 				     pages, NULL);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
-	ret = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write, 0,
-				     pages, NULL);
+	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
+				     0, pages, NULL);
 #else
-	ret = get_user_pages (src_task, src_mm, vaddr, count, foll_write, 0, pages,
-			      NULL);
+	pinned = get_user_pages (src_task, src_mm, vaddr, count, foll_write, 0,
+			      pages, NULL);
 #endif
 	if (!cpumask_empty(&saved_mask))
 		set_cpus_allowed_ptr(current, &saved_mask);
 
-	if (ret > 0) {
-		atomic_add(ret, &tg->n_pinned);
-		atomic_add(ret, &xpmem_my_part->n_pinned);
+	if (pinned > 0) {
+		atomic_add(pinned, &tg->n_pinned);
+		atomic_add(pinned, &xpmem_my_part->n_pinned);
 	}
-	return ret;
+	return pinned;
 }
 
 /*
@@ -446,17 +446,17 @@ int
 xpmem_ensure_valid_PFN(struct xpmem_segment *seg, u64 vaddr,
 		       struct page **pages, unsigned long count)
 {
-  int ret;
+	int pinned;
 	struct xpmem_thread_group *seg_tg = seg->tg;
 
 	/* the seg may have been marked for destruction while we were down() */
-        if (seg->flags & XPMEM_FLAG_DESTROYING)
+	if (seg->flags & XPMEM_FLAG_DESTROYING)
 		return -ENOENT;
 
 	/* pin PFN */
-	ret = xpmem_pin_page(seg_tg, seg_tg->group_leader, seg_tg->mm, vaddr,
+	pinned = xpmem_pin_page(seg_tg, seg_tg->group_leader, seg_tg->mm, vaddr,
 			     pages, count);
-	return ret;
+	return pinned;
 }
 
 /*
