@@ -314,7 +314,7 @@ xpmem_remap_pages(struct xpmem_segment *seg,
  * Fault in and pin a single page for the specified task and mm.
  */
 static int
-xpmem_pin_page(struct xpmem_thread_group *tg, struct task_struct *src_task,
+xpmem_pin_pages(struct xpmem_thread_group *tg, struct task_struct *src_task,
 	       struct mm_struct *src_mm, u64 vaddr, struct page **pages,
 	       unsigned long count)
 {
@@ -333,9 +333,7 @@ xpmem_pin_page(struct xpmem_thread_group *tg, struct task_struct *src_task,
 		return -ENOENT;
 
 	avail = (vma->vm_end - vaddr) >> PAGE_SHIFT;
-	if (avail < count) {
-		count = avail;
-	}
+	count = min(count, avail);
 
 	/*
 	 * get_user_pages() may have to allocate pages on behalf of
@@ -454,7 +452,7 @@ xpmem_ensure_valid_PFN(struct xpmem_segment *seg, u64 vaddr,
 		return -ENOENT;
 
 	/* pin PFN */
-	pinned = xpmem_pin_page(seg_tg, seg_tg->group_leader, seg_tg->mm, vaddr,
+	pinned = xpmem_pin_pages(seg_tg, seg_tg->group_leader, seg_tg->mm, vaddr,
 			     pages, count);
 	return pinned;
 }
