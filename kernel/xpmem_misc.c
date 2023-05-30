@@ -343,8 +343,9 @@ xpmem_config_max_page_fault_common(struct file *file,
 {
 	ssize_t size = count;
 	long value;
-	int ret = user_atol(buffer, count, &value);
+	int ret;
 
+	ret = user_atol(buffer, count, &value);
 	if (ret < 0) {
 		return ret;
 	}

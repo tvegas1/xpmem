@@ -318,7 +318,7 @@ xpmem_pin_pages(struct xpmem_thread_group *tg, struct task_struct *src_task,
 	       struct mm_struct *src_mm, u64 vaddr, struct page **pages,
 	       unsigned long count)
 {
-	int pinned;
+	int nr_pinned;
 	struct vm_area_struct *vma;
 	cpumask_t saved_mask = CPU_MASK_NONE;
 	int foll_write;
@@ -359,29 +359,29 @@ xpmem_pin_pages(struct xpmem_thread_group *tg, struct task_struct *src_task,
 
 	/* get_user_pages()/get_user_pages_remote() faults and pins the page */
 #if   LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
-	pinned = get_user_pages_remote (src_mm, vaddr, count, foll_write, pages,
+	nr_pinned = get_user_pages_remote (src_mm, vaddr, count, foll_write, pages,
 				     NULL, NULL);
 #elif   LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
-	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
-				     pages, NULL, NULL);
+	nr_pinned = get_user_pages_remote (src_task, src_mm, vaddr, count,
+				     foll_write, pages, NULL, NULL);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
-				     pages, NULL);
+	nr_pinned = get_user_pages_remote (src_task, src_mm, vaddr, count,
+				     foll_write, pages, NULL);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
-	pinned = get_user_pages_remote (src_task, src_mm, vaddr, count, foll_write,
-				     0, pages, NULL);
+	nr_pinned = get_user_pages_remote (src_task, src_mm, vaddr, count,
+				     foll_write, 0, pages, NULL);
 #else
-	pinned = get_user_pages (src_task, src_mm, vaddr, count, foll_write, 0,
+	nr_pinned = get_user_pages (src_task, src_mm, vaddr, count, foll_write, 0,
 			      pages, NULL);
 #endif
 	if (!cpumask_empty(&saved_mask))
 		set_cpus_allowed_ptr(current, &saved_mask);
 
-	if (pinned > 0) {
-		atomic_add(pinned, &tg->n_pinned);
-		atomic_add(pinned, &xpmem_my_part->n_pinned);
+	if (nr_pinned > 0) {
+		atomic_add(nr_pinned, &tg->n_pinned);
+		atomic_add(nr_pinned, &xpmem_my_part->n_pinned);
 	}
-	return pinned;
+	return nr_pinned;
 }
 
 /*
