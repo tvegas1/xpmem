@@ -237,13 +237,13 @@ xpmem_put_page(struct page *page)
 }
 
 struct remap_context {
-	struct xpmem_segment *seg;
-	struct page **pages;
-	unsigned long index;
-	unsigned long count;
+	struct xpmem_segment  *seg;
+	struct page           **pages;
+	unsigned long         index;
+	unsigned long         count;
 	struct vm_area_struct *vma;
-	u64 vaddr;
-	int result;
+	u64                   vaddr;
+	int                   result;
 };
 
 #ifdef HAVE_LATEST_APPLY_TO_PAGE_RANGE
