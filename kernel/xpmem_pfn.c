@@ -112,7 +112,7 @@ xpmem_hugetlb_pte(pte_t *pte, struct mm_struct *mm, u64 vaddr, u64 *offset)
  * Given an address space and a virtual address return a pointer to its
  * pte if one is present.
  */
-static pte_t *
+pte_t *
 xpmem_vaddr_to_pte_offset(struct mm_struct *mm, u64 vaddr, u64 *offset)
 {
 	pgd_t *pgd;

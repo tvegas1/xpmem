@@ -170,7 +170,7 @@ xpmem_fault_vaddr_end(u64 vm_end, u64 addr, unsigned long max_pages)
 		if (addr >= vm_end) {
 			break;
 		}
-		if (xpmem_vaddr_to_PFN(current->mm, addr)) {
+		if (xpmem_vaddr_to_pte_offset(current->mm, addr, NULL)) {
 			break;
 		}
 	}
@@ -185,7 +185,7 @@ xpmem_fault_vaddr_start(u64 vm_start, u64 addr, unsigned long max_pages)
 		if (addr <= vm_start) {
 			break;
 		}
-		if (xpmem_vaddr_to_PFN(current->mm, addr - PAGE_SIZE)) {
+		if (xpmem_vaddr_to_pte_offset(current->mm, addr - PAGE_SIZE, NULL)) {
 			break;
 		}
 	}
@@ -207,6 +207,7 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 	unsigned long pages_before;
 	struct page *pages[XPMEM_MAX_PAGE_FAULTS];
 	int result = 0;
+
 	xpmem_max_page_fault_get(&pages_before, &pages_after);
 
 	att = vma->vm_private_data;
