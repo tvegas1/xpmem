@@ -262,6 +262,7 @@ xpmem_fault_pages(struct xpmem_segment *seg, struct vm_area_struct *vma,
 			}
 			continue;
 		}
+
 		XPMEM_DEBUG("calling xpmem_remap_pages() vaddr=%llx "
 			    "start=%llx npages=%d", vaddr, start, count);
 		result |= xpmem_remap_pages(seg, vma, vaddr, start, pages, count);
@@ -271,7 +272,7 @@ out:
 	if (!result) {
 		result = VM_FAULT_SIGBUS;
 	}
-	if (result == VM_FAULT_SIGBUS) {
+	if (result & VM_FAULT_SIGBUS) {
 		XPMEM_DEBUG("fault returning SIGBUS vaddr=%llx", vaddr);
 	}
 	return result;
