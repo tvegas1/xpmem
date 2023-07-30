@@ -2,32 +2,12 @@
 set -Exeuo pipefail
 
 OS=$1
-PR_NUM=$2
-
-install_packages() {
-  if [[ $OS == *"ubuntu"* ]]; then
-    apt-get update &&
-      DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-        automake \
-        dkms \
-        git \
-        libtool &&
-      apt-get clean && rm -rf /var/lib/apt/lists/*
-  elif [[ $OS == *"centos"* ]]; then
-    yum install -y -q centos-release-scl
-    yum install -y -q \
-      automake \
-      devtoolset-8-gcc \
-      devtoolset-8-gcc-c++ \
-      elfutils-libelf-devel \
-      git \
-      libtool \
-      make &&
-      yum clean all
-  fi
-}
+KERNEL=$2
+PR_NUM=$3
 
 xpmem_build() {
+  uname -r
+  gcc --version
   git clone -q https://github.com/openucx/xpmem.git
   cd xpmem
   git fetch origin pull/"$PR_NUM"/merge
@@ -59,11 +39,32 @@ xpmem_load() {
   fi
 }
 
+install_gcc() {
+  # Find the GCC ver used to compile the running kernel
+  GCC_VER=$(awk -F ' ' '{print $7}' /proc/version | cut -d'-' -f1)
+  echo "INFO: Installing GCC ver $GCC_VER"
+  wget -q https://ftp.gnu.org/gnu/gcc/gcc-"$GCC_VER"/gcc-"$GCC_VER".tar.xz
+  tar xf gcc-"$GCC_VER".tar.xz
+  (cd gcc-"$GCC_VER" && ./contrib/download_prerequisites)
+  mkdir gcc-build
+  cd gcc-build
+  ../gcc-"${GCC_VER}"/configure --enable-languages=c,c++ --disable-multilib
+  make -j"$(nproc)"
+  sudo make install
+  cd -
+  gcc --version  
+  # Create a symlink, as kernel build expects for gcc-X binary
+  GCC_MAJOR_VER="${GCC_VER%%.*}"
+  ln -s "$(which gcc)" "$(which gcc)"-"$GCC_MAJOR_VER"
+}
+
 err_report() {
   echo "Exited with ERROR in line $1"
 }
 trap 'err_report $LINENO' ERR
 
-install_packages
+if [[ $KERNEL == "mainline" ]]; then
+  install_gcc
+fi
 xpmem_build
 xpmem_load
