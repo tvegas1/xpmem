@@ -44,6 +44,9 @@ install_gcc() {
   GCC_VER=$(awk -F ' ' '{print $7}' /proc/version | cut -d'-' -f1)
   echo "INFO: Installing GCC ver $GCC_VER"
   wget -q https://ftp.gnu.org/gnu/gcc/gcc-"$GCC_VER"/gcc-"$GCC_VER".tar.xz
+  wget -q https://ftp.gnu.org/gnu/gcc/gcc-"$GCC_VER"/gcc-"$GCC_VER".tar.xz.sig
+  wget -q https://ftp.gnu.org/gnu/gnu-keyring.gpg
+  gpgv --keyring ./gnu-keyring.gpg gcc-"$GCC_VER".tar.xz.sig gcc-"$GCC_VER".tar.xz
   tar xf gcc-"$GCC_VER".tar.xz
   (cd gcc-"$GCC_VER" && ./contrib/download_prerequisites)
   mkdir gcc-build

@@ -119,17 +119,17 @@ stages:
 
         strategy:
           matrix:
-            centos7:
-              BOX_NAME: centos7
+            ubuntu22-mainline:
+              BOX_NAME: ubuntu2204
+              KERNEL: mainline
+            ubuntu22:
+              BOX_NAME: ubuntu2204
             ubuntu18:
               BOX_NAME: ubuntu1804
             ubuntu20:
               BOX_NAME: ubuntu2004
-            ubuntu22:
-              BOX_NAME: ubuntu2204
-            ubuntu22-mainline:
-              BOX_NAME: ubuntu2204
-              KERNEL: mainline
+            centos7:
+              BOX_NAME: centos7
 
         steps:
           - checkout: self
@@ -164,8 +164,13 @@ stages:
               export VAGRANT_HOME=/opt/vagrant_home
               vagrant destroy -f
               vagrant global-status --prune
-              virsh destroy vm_${BOX_NAME} || true
-              virsh undefine vm_${BOX_NAME} || true
+              set +e
+              virsh destroy vm_${BOX_NAME}
+              virsh undefine vm_${BOX_NAME}
+              sudo rm -rf /var/lib/libvirt/images/*
+              virsh pool-destroy  default
+              virsh pool-delete   default
+              virsh pool-undefine default
             condition: always()
             displayName: Bring down VM
             workingDirectory: $(System.DefaultWorkingDirectory)/ci/vm/
