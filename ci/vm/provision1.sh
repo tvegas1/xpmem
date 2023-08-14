@@ -32,7 +32,8 @@ install_mainline_kernel() {
     add-apt-repository ppa:cappelikan/ppa    
     apt-get update &&
       DEBIAN_FRONTEND=noninteractive apt-get install -yq mainline
-    mainline --install-latest -y
+    mainline install-latest
+    echo $?
 }
 
 
