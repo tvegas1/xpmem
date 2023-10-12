@@ -19,9 +19,9 @@ jobs:
           kernel_ver=$(rpm -qa | grep kernel-devel | cut -d'-' -f3-)
           ./configure --with-kerneldir=/usr/src/kernels/${kernel_ver}
           cov-build --dir cov-dir make -j$(nproc) &>/dev/null
+          cov-manage-emit --dir cov-dir --tu-pattern "file('.*/kernel/*')" delete || true
           cov-analyze --dir cov-dir --jobs auto | tee log
 
-          printf '\n%79s\n' | tr ' ' =
           echo "Detailed report:"
           cov-format-errors --dir cov-dir --strip-path /*/*/s --emacs-style
 
