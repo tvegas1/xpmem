@@ -1,0 +1,48 @@
+jobs:
+  - job: Coverity
+    pool:
+      name: MLNX
+      demands: ucx_docker
+    container: centos7
+    displayName: Coverity
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 10
+
+      - bash: |
+          set -Exeuo pipefail
+          source /etc/profile.d/modules.sh
+          module load /hpc/local/etc/modulefiles/tools/cov-2021.12
+          ./autogen.sh
+          kernel_ver=$(rpm -qa | grep kernel-devel | cut -d'-' -f3-)
+          ./configure --with-kerneldir=/usr/src/kernels/${kernel_ver}
+          cov-build --dir cov-dir make -j$(nproc) &>/dev/null
+          cov-analyze --dir cov-dir --jobs auto | tee log
+
+          printf '\n%79s\n' | tr ' ' =
+          echo "Detailed report:"
+          cov-format-errors --dir cov-dir --strip-path /*/*/s --emacs-style
+
+          echo "Saving HTML report"
+          cov-format-errors --dir cov-dir --strip-path /*/*/s --html-output report
+
+          defects=$(awk '/Defect occurrences/ {print $5}' log) || defects=0
+          if [ "$defects" -gt 0 ]; then
+            msg="Coverity detected $defects defects"
+            echo "##vso[task.logissue type=warning]${msg}"
+            echo "##vso[task.setvariable variable=covFailed]True"
+            echo "##vso[task.complete result=SucceededWithIssues;]"
+          else
+            echo "No Coverity defects detected"
+            echo "##vso[task.setvariable variable=covFailed]False"
+          fi
+        displayName: Coverity scan
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          pathToPublish: '$(Build.Repository.LocalPath)/report'
+          artifactName: Cov_reports
+        condition: eq(variables['covFailed'], 'True')
+        displayName: Publish Cov reports
