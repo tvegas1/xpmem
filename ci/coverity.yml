@@ -19,18 +19,17 @@ jobs:
           kernel_ver=$(rpm -qa | grep kernel-devel | cut -d'-' -f3-)
           ./configure --with-kerneldir=/usr/src/kernels/${kernel_ver}
           cov-build --dir cov-dir make -j$(nproc) &>/dev/null
-          cov-manage-emit --dir cov-dir --tu-pattern "file('.*/kernel/*')" delete || true
-          cov-analyze --dir cov-dir --jobs auto | tee log
+          cov-analyze --dir cov-dir --jobs auto
 
           echo "Detailed report:"
-          cov-format-errors --dir cov-dir --strip-path /*/*/s --emacs-style
+          cov-format-errors --dir cov-dir --strip-path /*/*/s --exclude-files '/usr/src/kernels/*' --emacs-style
 
           echo "Saving HTML report"
-          cov-format-errors --dir cov-dir --strip-path /*/*/s --html-output report
+          cov-format-errors --dir cov-dir --strip-path /*/*/s --exclude-files '/usr/src/kernels/*' --html-output report
 
-          defects=$(awk '/Defect occurrences/ {print $5}' log) || defects=0
+          defects=$(grep -c '<error>' report/index.xml) || defects=0
           if [ "$defects" -gt 0 ]; then
-            msg="Coverity detected $defects defects"
+            msg="Coverity detected $defects defect\s"
             echo "##vso[task.logissue type=warning]${msg}"
             echo "##vso[task.setvariable variable=covFailed]True"
             echo "##vso[task.complete result=SucceededWithIssues;]"
