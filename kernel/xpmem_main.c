@@ -85,12 +85,12 @@ xpmem_open(struct inode *inode, struct file *file)
 	tg->gid = current_gid();
 	atomic_set(&tg->uniq_segid, 0);
 	atomic_set(&tg->uniq_apid, 0);
-	atomic_set(&tg->n_pinned, 0);
+	atomic_long_set(&tg->n_pinned, 0);
 	tg->addr_limit = TASK_SIZE;
 	rwlock_init(&tg->seg_list_lock);
 	INIT_LIST_HEAD(&tg->seg_list);
 	INIT_LIST_HEAD(&tg->tg_hashlist);
-	atomic_set(&tg->n_recall_PFNs, 0);
+	atomic_long_set(&tg->n_recall_PFNs, 0);
 	mutex_init(&tg->recall_PFNs_mutex);
 	init_waitqueue_head(&tg->block_recall_PFNs_wq);
 	init_waitqueue_head(&tg->allow_recall_PFNs_wq);
@@ -434,8 +434,8 @@ xpmem_init(void)
 		goto out_2;
 
 	/* create debugging entries in /proc/xpmem */
-	atomic_set(&xpmem_my_part->n_pinned, 0);
-	atomic_set(&xpmem_my_part->n_unpinned, 0);
+	atomic_long_set(&xpmem_my_part->n_pinned, 0);
+	atomic_long_set(&xpmem_my_part->n_unpinned, 0);
 	global_pages_entry = proc_create_data("global_pages", 0644,
 					      xpmem_unpin_procfs_dir,
 					      &xpmem_unpin_procfs_ops,
