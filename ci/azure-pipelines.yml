@@ -59,6 +59,7 @@ stages:
             workingDirectory: $(System.DefaultWorkingDirectory)/test/gtest
 
   - stage: Coverity
+    dependsOn: Codestyle
     jobs:
       - template: coverity.yml
 
