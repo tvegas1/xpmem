@@ -30,9 +30,8 @@ jobs:
           defects=$(grep -c '<error>' report/index.xml) || defects=0
           if [ "$defects" -gt 0 ]; then
             msg="Coverity detected $defects defect\s"
-            echo "##vso[task.logissue type=warning]${msg}"
+            echo "##vso[task.logissue type=error]${msg}"
             echo "##vso[task.setvariable variable=covFailed]True"
-            echo "##vso[task.complete result=SucceededWithIssues;]"
           else
             echo "No Coverity defects detected"
             echo "##vso[task.setvariable variable=covFailed]False"
