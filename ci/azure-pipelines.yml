@@ -125,12 +125,11 @@ stages:
 
         strategy:
           matrix:
-            ubuntu22-mainline:
+            ubuntu2310:
+              BOX_NAME: ubuntu2310
+            ubuntu2204:
               BOX_NAME: ubuntu2204
-              KERNEL: mainline
-            ubuntu22:
-              BOX_NAME: ubuntu2204
-            ubuntu18:
+            ubuntu1804:
               BOX_NAME: ubuntu1804
             ubuntu20:
               BOX_NAME: ubuntu2004
