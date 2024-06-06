@@ -37,7 +37,18 @@
 #endif
 #endif
 
+#ifndef HAVE_PTE_MAP_OFFSET_MACRO
+#define pte_offset_map pte_offset_kernel
+#endif
+
 #if CONFIG_HUGETLB_PAGE
+
+#ifndef HAVE_PMD_LEAF_MACRO
+#define pmd_leaf pmd_large
+#endif
+#ifndef HAVE_PUD_LEAF_MACRO
+#define pud_leaf pud_large
+#endif
 
 #if (defined(CONFIG_ARM64) || defined(CONFIG_ARM))
 #define pmd_is_huge(p) pmd_sect(p)
@@ -47,10 +58,10 @@
 #define pud_is_huge(p) (0)
 #endif
 #elif defined(CONFIG_X86)
-#define pmd_is_huge(p) pmd_large(p)
-#define pud_is_huge(p) pud_large(p)
+#define pmd_is_huge(p) pmd_leaf(p)
+#define pud_is_huge(p) pud_leaf(p)
 #elif defined(CONFIG_PPC)
-#define pmd_is_huge(p) pmd_large(p)
+#define pmd_is_huge(p) pmd_leaf(p)
 #define pud_is_huge(p) ((pud_val(p) & 0x3) != 0x0)
 #else
 #error Unsuported architecture

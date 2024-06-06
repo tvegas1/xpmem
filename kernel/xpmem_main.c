@@ -400,7 +400,7 @@ static struct miscdevice xpmem_dev_handle = {
 /*
  * Initialize the XPMEM driver.
  */
-int __init
+static int __init
 xpmem_init(void)
 {
 	int i, ret;
@@ -488,7 +488,7 @@ out_1:
 /*
  * Remove the XPMEM driver from the system.
  */
-void __exit
+static void __exit
 xpmem_exit(void)
 {
 	kfree(xpmem_my_part);
