@@ -96,6 +96,7 @@ stages:
               set -eEx
               ./autogen.sh
               kernel_ver=$(rpm -qa | grep kernel-devel | cut -d'-' -f3-)
+              export CFLAGS='-Wextra -Werror -Wframe-larger-than=2048'
               ./configure --with-kerneldir=/usr/src/kernels/${kernel_ver}
               make
             displayName: Build on CentOS
@@ -105,6 +106,7 @@ stages:
               set -eEx
               ./autogen.sh
               kernel_ver=$(dpkg -l | grep 'linux-headers-.*-generic' | awk '{print $2}')
+              export CFLAGS='-Wextra -Werror -Wframe-larger-than=2048'
               ./configure --enable-gtest --with-kerneldir=/usr/src/${kernel_ver}
               make
             displayName: Build on Ubuntu
