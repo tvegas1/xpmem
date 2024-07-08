@@ -10,34 +10,34 @@ dnl check for kernel source
 
 AC_DEFUN([AC_PATH_KERNEL_SOURCE_SEARCH],
 [
-  kerneldir=missing
-  kernelext=ko
-  no_kernel=yes
+  kerneldir=
+  kernelinc=
+  kernelext="ko"
 
-  if test `uname` != "Linux"; then
-    kerneldir="not running Linux"
-  else
-    vers="$(uname -r)"
-    for dir in ${ac_kerneldir} \
-        /lib/modules/${vers}/build \
-        /usr/src/kernel-source-* \
-        /usr/src/linux-source-${vers} \
-        /usr/src/linux /lib/modules/${vers}/source
-    do
-      if test -e $dir/Module.symvers ; then
-        kerneldir=`dirname $dir/Makefile`/ || continue
-        no_kernel=no
-        break
-      fi;
-    done
-  fi
+  for dir in "${ac_kerneldir}" "${ac_kernelinc}" \
+      /lib/modules/${kernelvers}/build \
+      /lib/modules/${kernelvers}/source \
+      /usr/src/linux-source-${kernelvers} \
+      /usr/src/kernel-source-* \
+      /usr/src/linux
+  do
+    if test -z "$dir"; then
+      continue
+    fi
+    if test -z "$kerneldir" && test -e "$dir"/Module.symvers ; then
+      kerneldir="$dir"/
+    fi
+    if test -z "$kernelinc" && test -e "$dir"/include/linux/mm.h; then
+      kernelinc="$dir"/
+    fi
+  done
 
-  if test x${no_kernel} = xyes; then
+  if test -z "$kerneldir"; then
       AC_MSG_ERROR([could not find kernel sources])
   fi
-  ac_cv_have_kernel="no_kernel=${no_kernel} \
-                kerneldir=\"${kerneldir}\" \
-                kernelext=\"ko\""
+  if test -z "$kernelinc"; then
+      AC_MSG_ERROR([could not find kernel includes to use for configuration])
+  fi
 ]
 )
 
@@ -51,14 +51,16 @@ AC_DEFUN([AC_PATH_KERNEL_SOURCE],
   AS_IF([test $build_kernel_module = 1],[
 
   AC_MSG_CHECKING([for Linux kernel sources])
-  kernelvers=$(uname -r)
+  AC_ARG_WITH(kernelvers, [  --with-kernelvers=VERS  kernel release name], kernelvers=${with_kernelvers})
+  AC_ARG_WITH(kernelinc,  [  --with-kernelinc=INC    kernel directory containing ./include/linux],
+              ac_kernelinc=${withval})
 
   AC_ARG_WITH(kerneldir,
     [  --with-kerneldir=DIR    kernel sources in DIR],
 
     ac_kerneldir=${withval}
 
-    if test -n "$ac_kerneldir" ; then
+    if test -n "$ac_kerneldir" && test x"$kernelvers" = x;  then
 	if test ! ${ac_kerneldir#/lib/modules} = ${ac_kerneldir} ; then
 	    kernelvers=$(basename $(dirname ${ac_kerneldir}))
 	elif test ! ${ac_kerneldir#*linux-headers-} = ${ac_kerneldir} ; then
@@ -68,21 +70,20 @@ AC_DEFUN([AC_PATH_KERNEL_SOURCE],
 	    kernelvers=$(make -s kernelrelease -C ${ac_kerneldir} M=dummy 2>/dev/null)
 	fi
     fi
-
-    AC_PATH_KERNEL_SOURCE_SEARCH,
-
+    ,
     ac_kerneldir=""
-    AC_CACHE_VAL(ac_cv_have_kernel,AC_PATH_KERNEL_SOURCE_SEARCH)
   )
 
-  AC_ARG_WITH(kernelvers, [--with-kernelvers=VERSION   kernel release name], kernelvers=${with_kernelvers})
-
-  eval "$ac_cv_have_kernel"
+  kernelvers="${kernelvers:-$(uname -r)}"
+  AC_PATH_KERNEL_SOURCE_SEARCH
 
   AC_SUBST(kerneldir)
   AC_SUBST(kernelext)
   AC_SUBST(kernelvers)
   AC_MSG_RESULT(${kerneldir})
+
+  AC_MSG_CHECKING([for kernel checks include path])
+  AC_MSG_RESULT([${kernelinc}])
 
   AC_MSG_CHECKING([kernel release])
   AC_MSG_RESULT([${kernelvers}])
@@ -103,18 +104,26 @@ AC_DEFUN([AC_KERNEL_CHECKS],
                            -e s/s390x/s390/)
   save_CFLAGS="$CFLAGS"
   save_CPPFLAGS="$CPPFLAGS"
-  CFLAGS=
-  CPPFLAGS="-include $kerneldir/include/linux/kconfig.h \
-            -include $kerneldir/include/linux/compiler.h \
+  CFLAGS="$KERNEL_CHECKS_CFLAGS"
+  CPPFLAGS="-include $kernelinc/include/linux/kconfig.h \
+            -include $kernelinc/include/linux/compiler.h \
             -D__KERNEL__ \
             -DKBUILD_MODNAME=\"xpmem_configure\" \
-            -I$kerneldir/include \
-            -I$kerneldir/include/uapi \
-            -I$kerneldir/arch/$srcarch/include \
-            -I$kerneldir/arch/$srcarch/include/uapi \
-            -I$kerneldir/arch/$srcarch/include/generated \
-            -I$kerneldir/arch/$srcarch/include/generated/uapi \
+            -I$kernelinc/include \
+            -I$kernelinc/include/uapi \
+            -I$kernelinc/arch/$srcarch/include \
+            -I$kernelinc/arch/$srcarch/include/uapi \
+            -I$kernelinc/arch/$srcarch/include/generated \
+            -I$kernelinc/arch/$srcarch/include/generated/uapi \
             $CPPFLAGS"
+
+  AC_CHECK_DECL([kmalloc], [], [
+    AC_MSG_ERROR([cannot run kernel module configuration checks])], [[
+    #include <linux/slab.h>
+    #include <linux/mm.h>
+    #include <linux/sched.h>
+    #include <linux/mm_types.h>
+    #include <linux/proc_fs.h>]])
 
   AC_CHECK_MEMBERS([struct task_struct.cpus_mask], [], [],
                    [[#include <linux/sched.h>]])
@@ -146,7 +155,8 @@ AC_DEFUN([AC_KERNEL_CHECKS],
       int a = callback(NULL, 1, NULL);
     ]])], [
     AC_DEFINE([HAVE_LATEST_APPLY_TO_PAGE_RANGE], 1, [Have latest page iterator])
-  ], [])
+    AC_MSG_RESULT(yes)
+  ], [AC_MSG_RESULT(no)])
 
   AC_CHECK_DECLS([vm_flags_set], [], [], [[#include <linux/mm.h>]])
 
