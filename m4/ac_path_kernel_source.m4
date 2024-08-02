@@ -18,6 +18,7 @@ AC_DEFUN([AC_PATH_KERNEL_SOURCE_SEARCH],
       /lib/modules/${kernelvers}/build \
       /lib/modules/${kernelvers}/source \
       /usr/src/linux-source-${kernelvers} \
+      /usr/src/kernels/${kernelvers} \
       /usr/src/kernel-source-* \
       /usr/src/linux
   do
