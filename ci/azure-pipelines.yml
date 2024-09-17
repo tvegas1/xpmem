@@ -14,16 +14,16 @@ pr:
 resources:
   containers:
     - container: centos7
-      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/centos7:1
+      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/centos7:2
       options: -v /hpc/local:/hpc/local -v /auto/sw_tools:/auto/sw_tools
     - container: centos8
-      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/centos8:1
+      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/centos8:2
     - container: ubuntu18
-      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu18.04:1
+      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu18.04:2
     - container: ubuntu20
-      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu20.04:1
+      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu20.04:2
     - container: ubuntu22
-      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu22.04:1
+      image: rdmz-harbor.rdmz.labs.mlnx/xpmem/x86_64/ubuntu22.04:2
     - container: fedora
       image: rdmz-harbor.rdmz.labs.mlnx/ucx/fedora33:1
 
