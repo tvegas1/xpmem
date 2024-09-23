@@ -170,6 +170,33 @@ stages:
             displayName: DKMS module build on Ubuntu
             condition: contains(variables['build_container'], 'ubuntu')
 
+          - bash: |
+              set -eEx
+              test -f Makefile && make -i distclean || true
+              sudo apt-get update
+              sudo apt-get install -y debhelper
+
+              ./autogen.sh
+              ./configure --disable-kernel-module
+              make dist-gzip
+              tarball="$(ls xpmem-*.tar.gz)"
+              tar zxf "$tarball"
+              cd "${tarball%.tar.gz}"
+              dpkg-buildpackage --build=binary -uc
+              cd -
+              dpkg --contents libxpmem_*.deb
+              dpkg --contents libxpmem-dev_*.deb
+              dpkg --contents libxpmem-dbgsym_*.ddeb
+
+              sudo dpkg -i libxpmem_*.deb
+              sudo dpkg -i libxpmem-dev_*.deb
+              echo -e '#include <xpmem.h>\n int main() { (void)xpmem_version(); return 0; }' | gcc -xc - -lxpmem -o dump
+              ldd dump
+              ./dump
+
+            displayName: Debian userspace packaging
+            condition: contains(variables['build_container'], 'ubuntu')
+
   - stage: VMs
     displayName: Build & Test on VMs
     dependsOn: Codestyle

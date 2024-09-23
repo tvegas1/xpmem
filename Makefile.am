@@ -18,7 +18,8 @@ EXTRA_DIST = \
 	$(pkgconfig_DATA) \
 	xpmem-lib.spec \
 	xpmem-kmod.spec \
-	dkms.conf
+	dkms.conf \
+	debian
 
 .version:
 	echo "#%Module" > $@
