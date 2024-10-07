@@ -47,3 +47,4 @@ kernel/modules.order
 kernel/Module.symvers
 kernel/Kbuild
 .tmp_versions
+test-driver
