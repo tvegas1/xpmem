@@ -142,6 +142,10 @@ AC_DEFUN([AC_KERNEL_CHECK_GUP],
 				    int write, int force, struct page **pages,
 				    struct vm_area_struct **vmas);],
 	[4.8], [HAVE_GUP_4_8])
+
+  AS_IF([test "$gup_version" = no && test "${kernelvers%%.*}" -ge 5],
+        [AC_MSG_ERROR([could not find get_user_pages_remote function for kernel >=5.x.x])])
+
   AC_MSG_RESULT(${gup_version//_/.})
 ]
 )
