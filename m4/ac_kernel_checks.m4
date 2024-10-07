@@ -98,6 +98,54 @@ AC_DEFUN([AC_KERNEL_CHECKS],
 ]
 )
 
+AC_DEFUN([AC_GUP_CHECK], [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <linux/mm.h>]], [[
+	$1
+  ]])], [
+    AS_IF([test x"$gup_version" != xno], [AC_MSG_ERROR([get_user_pages_remote has multiple matches])])
+    gup_version=$2
+    AC_DEFINE([$3], 1, [Have get_user_pages_remote() kernel >= $gup_version])
+  ])
+])
+
+AC_DEFUN([AC_KERNEL_CHECK_GUP],
+[
+  AC_MSG_CHECKING(get_user_pages_remote version)
+  gup_version=no
+  AC_GUP_CHECK([
+	long get_user_pages_remote(struct mm_struct *mm,
+				   unsigned long start, unsigned long nr_pages,
+				   unsigned int gup_flags, struct page **pages,
+				   int *locked);],
+	[6.5], [HAVE_GUP_6_5])
+  AC_GUP_CHECK([
+	long get_user_pages_remote(struct mm_struct *mm,
+				    unsigned long start, unsigned long nr_pages,
+				    unsigned int gup_flags, struct page **pages,
+				    struct vm_area_struct **vmas, int *locked);],
+	[5.9], [HAVE_GUP_5_9])
+  AC_GUP_CHECK([
+	long get_user_pages_remote(struct task_struct *tsk, struct mm_struct *mm,
+				    unsigned long start, unsigned long nr_pages,
+				    unsigned int gup_flags, struct page **pages,
+				    struct vm_area_struct **vmas, int *locked);],
+	[4.10], [HAVE_GUP_4_10])
+  AC_GUP_CHECK([
+	long get_user_pages_remote(struct task_struct *tsk, struct mm_struct *mm,
+				    unsigned long start, unsigned long nr_pages,
+				    unsigned int gup_flags, struct page **pages,
+				    struct vm_area_struct **vmas);],
+	[4.9], [HAVE_GUP_4_9])
+  AC_GUP_CHECK([
+	long get_user_pages_remote(struct task_struct *tsk, struct mm_struct *mm,
+				    unsigned long start, unsigned long nr_pages,
+				    int write, int force, struct page **pages,
+				    struct vm_area_struct **vmas);],
+	[4.8], [HAVE_GUP_4_8])
+  AC_MSG_RESULT(${gup_version//_/.})
+]
+)
+
 AC_DEFUN([AC_KERNEL_CHECK_SUPPORT],
 [
   srcarch=$(uname -m | sed -e s/i.86/x86/ \
@@ -165,6 +213,7 @@ AC_DEFUN([AC_KERNEL_CHECK_SUPPORT],
   ], [AC_MSG_RESULT(no)])
 
   AC_CHECK_DECLS([vm_flags_set], [], [], [[#include <linux/mm.h>]])
+  AC_KERNEL_CHECK_GUP
 
   AC_SUBST(KFLAGS, [$KFLAGS])
   CPPFLAGS="$save_CPPFLAGS"
