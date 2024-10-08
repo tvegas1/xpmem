@@ -65,14 +65,11 @@ AC_DEFUN([AC_KERNEL_CHECKS],
     ac_kerneldir=${withval}
 
     if test -n "$ac_kerneldir" && test x"$kernelvers" = x;  then
-	if test ! ${ac_kerneldir#/lib/modules} = ${ac_kerneldir} ; then
-	    kernelvers=$(basename $(dirname ${ac_kerneldir}))
-	elif test ! ${ac_kerneldir#*linux-headers-} = ${ac_kerneldir} ; then
-	    # special case to deal with the way the travis script does headers
-	    kernelvers=${ac_kerneldir#*linux-headers-}
-	else
-	    kernelvers=$(make -s kernelrelease -C ${ac_kerneldir} M=dummy 2>/dev/null)
-	fi
+        if test ! ${ac_kerneldir#/lib/modules} = ${ac_kerneldir} ; then
+            kernelvers=$(basename $(dirname ${ac_kerneldir}))
+        else
+            kernelvers=$(make -s kernelversion -C ${ac_kerneldir} 2>/dev/null)
+        fi
     fi
     ,
     ac_kerneldir=""
