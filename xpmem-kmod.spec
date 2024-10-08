@@ -2,19 +2,25 @@
 #define buildforkernels current
 #define buildforkernels akmod
 
-%define kernel_release %(uname -r | sed -e 's/\.[^.]*$//g')
-%global debug_package %{nil}
+%define module xpmem
+%define version 2.7.3
 
-Summary: XPMEM: Cross-partition memory
-Name: xpmem-kmod-%{kernel_release}
-Version: 2.7.3
+%global debug_package %{nil}
+%define _unpackaged_files_terminate_build 0
+
+%if "%{?kernel_release}" == ""
+%define kernel_release %(uname -r)
+%endif
+
+Summary: XPMEM: Cross-partition memory kernel module package
+Name: %{module}-kmod-%{kernel_release}
+Version: %{version}
 Release: 0
 License: GPLv2
-Group: System Environment/Kernel
 Packager: Nathan Hjelm
-Source: xpmem-0.2.tar.bz2
-BuildRoot: %{_tmppath}/%{name}-0.2-build
-Requires: kernel = %{kernel_release}
+Source: %{module}-%{version}.tar.gz
+Group: System Environment/Kernel
+BuildRequires: kernel-devel
 Provides: xpmem-kmod
 
 %description
@@ -24,27 +30,23 @@ can be obtained by cloning the Git repository, original Mercurial
 repository or by downloading a tarball from the link above.
 
 %prep
-%setup -n xpmem-0.2
+%setup -n %{module}-%{version}
 
 %build
-./configure --prefix=/opt/xpmem
-pushd kernel ; make ; popd
+./configure --with-kernelvers=%{kernel_release}
+make
 
 %install
-pushd kernel ; make DESTDIR=$RPM_BUILD_ROOT install ; popd
+export INSTALL_MOD_PATH=$RPM_BUILD_ROOT
+export INSTALL_MOD_DIR=extra/%{module}
+make -C kernel modules_install
 mkdir -p $RPM_BUILD_ROOT/etc/udev/rules.d
-mkdir -p $RPM_BUILD_ROOT/lib/modules/$(uname -r)/kernel/extra
 cp 56-xpmem.rules $RPM_BUILD_ROOT/etc/udev/rules.d
-cp $RPM_BUILD_ROOT/opt/xpmem/lib/modules/$(uname -r)/xpmem.ko $RPM_BUILD_ROOT/lib/modules/$(uname -r)/kernel/extra
+find $RPM_BUILD_ROOT -name 'xpmem.*' | sed -e s@^$RPM_BUILD_ROOT@@ >filelist
+
+%files -f filelist
+/etc/udev/rules.d/56-xpmem.rules
 
 %post
 touch /etc/udev/rules.d/56-xpmem.rules
 depmod -a
-
-%files
-%defattr(-, root, root)
-/opt
-/lib/modules
-
-%config(noreplace)
-/etc/udev/rules.d/56-xpmem.rules

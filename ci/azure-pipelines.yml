@@ -136,6 +136,27 @@ stages:
 
           - bash: |
               set -eEx
+              git clean -xdf
+              ./autogen.sh
+              ./configure --disable-kernel-module
+              make dist-gzip
+              mkdir {BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+              mv xpmem-*.tar.* ./SOURCES/
+              rpm -qa | grep kernel-devel-
+              for kernel_ver in $(rpm -qa 'kernel-devel*' --qf "%{version}-%{release}.%{arch}\n"); do
+                  rpmbuild --define "_topdir $PWD" --define "kernel_release $kernel_ver" -ba xpmem-kmod.spec
+              done
+
+              ls -alrt RPMS/*/xpmem-kmod*.rpm
+              ls -alrt SRPMS/xpmem-kmod*.src.rpm
+              rpm -qplvi RPMS/*/xpmem-kmod*.rpm
+              rpm -qplvi SRPMS/xpmem-kmod*.src.rpm
+
+            displayName: KMOD package build on Centos
+            condition: contains(variables['build_container'], 'centos')
+
+          - bash: |
+              set -eEx
               # Workaround DKMS issue:
               # - https://github.com/dell/dkms/commit/468025752343dbc8609704bf0915f52b9c5c50f2
               sudo sed -i  -e 's@if \[\[ ! $temp_dir_name/dkms_main_tree \]\]@if \[\[ ! -d $temp_dir_name/dkms_main_tree \]\]@g' /usr/sbin/dkms || true
