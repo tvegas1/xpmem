@@ -227,6 +227,22 @@ stages:
             displayName: Debian userspace packaging
             condition: contains(variables['build_container'], 'ubuntu')
 
+          - bash: |
+              set -eEx
+              test -f Makefile && make -i distclean || true
+              sudo apt-get update
+              sudo apt-get install -y rpm
+              mkdir {BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+              sed -i '/BuildRequires/d' xpmem.spec
+              ./autogen.sh
+              ./configure --disable-kernel-module
+              make dist-gzip
+              mv xpmem-*.tar.* ./SOURCES/
+              rpmbuild --define "_topdir $PWD" -ba xpmem.spec
+              find RPMS SRPMS
+            displayName: Build userspace RPMs on CentOS
+            condition: contains(variables['build_container'], 'ubuntu18')
+
   - stage: VMs
     displayName: Build & Test on VMs
     dependsOn: Codestyle

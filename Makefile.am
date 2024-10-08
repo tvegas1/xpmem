@@ -16,7 +16,7 @@ sysconf_DATA = .version \
 EXTRA_DIST = \
 	56-xpmem.rules \
 	$(pkgconfig_DATA) \
-	xpmem-lib.spec \
+	xpmem.spec \
 	xpmem-kmod.spec \
 	xpmem-dkms.spec \
 	dkms.conf \

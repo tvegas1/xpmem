@@ -5,7 +5,7 @@
 %global debug_package %{nil}
 
 Summary: XPMEM: Cross-partition memory
-Name: xpmem-lib
+Name: xpmem
 Version: 2.7.3
 Release: 1
 License: LGPLv2.1
