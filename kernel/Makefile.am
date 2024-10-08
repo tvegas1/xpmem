@@ -26,6 +26,9 @@ export KCPPFLAGS
 $(MODULE): ${module_sources}
 	$(MAKE) -C $(KERNEL_PATH) M=$(abs_builddir)
 
+modules_install: $(MODULE)
+	$(MAKE) -C $(KERNEL_PATH) M=$(abs_builddir) modules_install
+
 clean-local:
 	$(MAKE) -C $(KERNEL_PATH) M=$(abs_builddir) clean
 
