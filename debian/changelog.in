@@ -1,4 +1,4 @@
-xpmem-lib (2.7.3) unstable; urgency=medium
+xpmem-lib (@PACKAGE_VERSION@) unstable; urgency=medium
 
   * Initial release.
 

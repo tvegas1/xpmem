@@ -1,7 +1,7 @@
 %{?!_dkmsdir: %define _dkmsdir /var/lib/dkms}
 
 %define module xpmem
-%define version 2.7.3
+%define version @PACKAGE_VERSION@
 
 Summary: XPMEM: Cross-partition memory dkms package
 Name: %{module}

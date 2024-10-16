@@ -3,7 +3,7 @@
 #define buildforkernels akmod
 
 %define module xpmem
-%define version 2.7.3
+%define version @PACKAGE_VERSION@
 
 %global debug_package %{nil}
 %define _unpackaged_files_terminate_build 0
