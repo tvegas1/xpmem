@@ -72,6 +72,11 @@ AC_KERNEL_CHECKS
 
 AC_CONFIG_FILES([Makefile
                  cray-xpmem.pc
+                 dkms.conf
+                 debian/changelog
+                 xpmem-dkms.spec
+                 xpmem-kmod.spec
+                 xpmem.spec
                  module
                  include/Makefile
                  kernel/Kbuild
